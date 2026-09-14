@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Token Arena</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="bg-anim"></div>
+
+<header class="topbar">
+  <span class="brand">🔥 Token Arena ❄️</span>
+</header>
+
+<main class="app">
+
+  <section id="screen-login" class="screen">
+    <div class="card narrow center">
+      <h2>เข้าร่วมเกม</h2>
+      <label class="field">
+        <span>ชื่อของคุณ</span>
+        <input id="f-name" type="text" maxlength="20" placeholder="ใส่ชื่อเล่น">
+      </label>
+      <p class="field-label">เลือกอวาตาร์</p>
+      <div id="avatar-grid" class="avatar-grid"></div>
+      <button id="btn-join" type="button" class="btn btn-primary" disabled>เข้าเกม</button>
+    </div>
+  </section>
+
+  <section id="screen-board" class="screen">
+    <div class="toolbar">
+      <span id="last-updated" class="muted small"></span>
+      <div class="toolbar-actions">
+        <button id="btn-refresh" type="button" class="btn btn-ghost small-btn">รีเฟรช</button>
+        <button id="btn-leave" type="button" class="btn btn-ghost small-btn">ออกจากเกม</button>
+        <button id="btn-reset" type="button" class="btn btn-danger small-btn">เริ่มเกมใหม่</button>
+      </div>
+    </div>
+
+    <div id="player-grid" class="player-grid"></div>
+  </section>
+
+  <section id="screen-notconfigured" class="screen">
+    <div class="card narrow center">
+      <h2>ยังไม่ได้ตั้งค่าเซิร์ฟเวอร์</h2>
+      <p>ทำตามขั้นตอนในไฟล์ <code>apps-script/README.md</code> แล้ววาง URL ลงใน <code>js/config.js</code> ก่อนครับ</p>
+    </div>
+  </section>
+
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
