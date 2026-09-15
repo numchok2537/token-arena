@@ -1,11 +1,16 @@
 const AVATARS = ["🦊", "🐼", "🐸", "🦄", "🐯", "🦁", "🐻", "🐨", "🐶", "🐱", "🦉", "🐧", "🐢", "🦖", "🐙", "🦋"];
 const STORAGE_KEY = "tokenArena.player";
+const TRANSFER_AMOUNT = 5;
 const el = (id) => document.getElementById(id);
 
 let myPlayer = null;
 let players = [];
+let netPairs = {};
+let roster = {};
 let pollHandle = null;
 let selectedAvatar = null;
+let pendingGainerId = null;
+let pendingLoserId = null;
 
 function genId() {
   return (crypto.randomUUID && crypto.randomUUID()) || `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -32,10 +37,9 @@ async function api(payload) {
   });
 }
 
-async function fetchPlayers() {
+async function fetchState() {
   const res = await fetch(CONFIG.API_URL, { cache: "no-store" });
-  const data = await res.json();
-  return data.players || [];
+  return res.json();
 }
 
 /* ---------------- login ---------------- */
@@ -80,12 +84,30 @@ async function enterBoard() {
 
 async function refresh() {
   try {
-    players = await fetchPlayers();
+    const data = await fetchState();
+    players = data.players || [];
+    netPairs = data.netPairs || {};
+    roster = data.roster || {};
     renderBoard();
+    renderSelectionBar();
     el("last-updated").textContent = "อัปเดตล่าสุด " + new Date().toLocaleTimeString("th-TH");
   } catch (e) {
     el("last-updated").textContent = "โหลดข้อมูลไม่สำเร็จ: " + e.message;
   }
+}
+
+function playerName(id) {
+  const p = players.find((x) => x.id === id);
+  if (p) return p.name;
+  if (roster[id]) return roster[id].name + " (ออกจากเกมแล้ว)";
+  return "ไม่ทราบชื่อ";
+}
+
+function playerAvatar(id) {
+  const p = players.find((x) => x.id === id);
+  if (p) return p.avatar;
+  if (roster[id]) return roster[id].avatar;
+  return "❓";
 }
 
 function renderBoard() {
@@ -96,42 +118,134 @@ function renderBoard() {
     const isMe = myPlayer && p.id === myPlayer.id;
     const tokens = p.tokens || 0;
     const card = document.createElement("div");
-    card.className = "player-card" + (isMe ? " me" : "") + (tokens > 0 ? " pos" : tokens < 0 ? " neg" : "");
+    card.className =
+      "player-card" +
+      (isMe ? " me" : "") +
+      (tokens > 0 ? " pos" : tokens < 0 ? " neg" : "") +
+      (pendingGainerId === p.id ? " picked-gain" : "") +
+      (pendingLoserId === p.id ? " picked-lose" : "");
     card.innerHTML = `
       <div class="avatar-big">${p.avatar}</div>
       <div class="p-name">${escapeHtml(p.name)}${isMe ? ' <span class="you-tag">(คุณ)</span>' : ""}</div>
       <div class="p-tokens">${tokens}</div>
-      ${
-        isMe
-          ? `<div class="controls">
-              <button type="button" class="fx-btn fire-btn" data-delta="5" aria-label="บวก 5">🔥<span class="fx-label">+5</span></button>
-              <button type="button" class="fx-btn ice-btn" data-delta="-5" aria-label="ลบ 5">❄️<span class="fx-label">-5</span></button>
-            </div>`
-          : ""
-      }
+      <div class="controls">
+        <button type="button" class="fx-btn fire-btn" data-id="${p.id}" data-role="gain" aria-label="ให้ ${TRANSFER_AMOUNT}">🔥<span class="fx-label">+${TRANSFER_AMOUNT}</span></button>
+        <button type="button" class="fx-btn ice-btn" data-id="${p.id}" data-role="lose" aria-label="ริบ ${TRANSFER_AMOUNT}">❄️<span class="fx-label">-${TRANSFER_AMOUNT}</span></button>
+      </div>
     `;
-    if (isMe) {
-      card.querySelectorAll(".fx-btn").forEach((btn) => {
-        btn.addEventListener("click", () => onAdjust(Number(btn.dataset.delta), btn));
-      });
-    }
     grid.appendChild(card);
+  });
+
+  grid.querySelectorAll(".fx-btn").forEach((btn) => {
+    btn.addEventListener("click", () => onPick(btn.dataset.role, btn.dataset.id, btn));
   });
 }
 
-function onAdjust(delta, btnEl) {
-  const p = players.find((x) => x.id === myPlayer.id);
-  if (p) p.tokens = (p.tokens || 0) + delta;
-  renderBoard();
-  btnEl.classList.add("burst");
-  setTimeout(() => btnEl.classList.remove("burst"), 400);
-  api({ action: "adjust", id: myPlayer.id, delta });
+function renderSelectionBar() {
+  const bar = el("selection-bar");
+  if (!pendingGainerId && !pendingLoserId) {
+    bar.hidden = true;
+    return;
+  }
+  bar.hidden = false;
+  el("pick-gain-label").textContent = pendingGainerId ? playerName(pendingGainerId) : "ยังไม่เลือก";
+  el("pick-lose-label").textContent = pendingLoserId ? playerName(pendingLoserId) : "ยังไม่เลือก";
 }
+
+function onPick(role, id, btnEl) {
+  if (role === "gain") {
+    pendingGainerId = pendingGainerId === id ? null : id;
+  } else {
+    pendingLoserId = pendingLoserId === id ? null : id;
+  }
+
+  if (pendingGainerId && pendingLoserId) {
+    if (pendingGainerId === pendingLoserId) {
+      // same player picked for both — invalid, reset and let them retry
+      pendingGainerId = null;
+      pendingLoserId = null;
+      renderBoard();
+      renderSelectionBar();
+      return;
+    }
+    executeTransfer(pendingGainerId, pendingLoserId, btnEl);
+    return;
+  }
+
+  renderBoard();
+  renderSelectionBar();
+}
+
+function executeTransfer(gainerId, loserId, btnEl) {
+  const gainer = players.find((p) => p.id === gainerId);
+  const loser = players.find((p) => p.id === loserId);
+  if (gainer) gainer.tokens = (gainer.tokens || 0) + TRANSFER_AMOUNT;
+  if (loser) loser.tokens = (loser.tokens || 0) - TRANSFER_AMOUNT;
+
+  const key = gainerId < loserId ? `${gainerId}|${loserId}` : `${loserId}|${gainerId}`;
+  const sign = gainerId < loserId ? 1 : -1;
+  netPairs[key] = (netPairs[key] || 0) + sign * TRANSFER_AMOUNT;
+
+  pendingGainerId = null;
+  pendingLoserId = null;
+  renderBoard();
+  renderSelectionBar();
+
+  if (btnEl) {
+    btnEl.classList.add("burst");
+    setTimeout(() => btnEl.classList.remove("burst"), 400);
+  }
+
+  api({ action: "transfer", gainerId, loserId, amount: TRANSFER_AMOUNT });
+}
+
+function cancelSelection() {
+  pendingGainerId = null;
+  pendingLoserId = null;
+  renderBoard();
+  renderSelectionBar();
+}
+
+/* ---------------- summary ---------------- */
+
+function openSummary() {
+  const rows = Object.keys(netPairs)
+    .map((key) => {
+      const [idA, idB] = key.split("|");
+      const net = netPairs[key];
+      const gainerId = net > 0 ? idA : idB;
+      const loserId = net > 0 ? idB : idA;
+      return { gainerId, loserId, amount: Math.abs(net) };
+    })
+    .filter((r) => r.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+
+  const list = el("summary-list");
+  if (!rows.length) {
+    list.innerHTML = `<p class="muted center">ยังไม่มีการให้/ริบ Token ระหว่างผู้เล่นเลยครับ</p>`;
+  } else {
+    list.innerHTML = rows
+      .map(
+        (r) => `
+        <div class="summary-row">
+          <span class="summary-side loser">${playerAvatar(r.loserId)} ${escapeHtml(playerName(r.loserId))}</span>
+          <span class="summary-arrow">เสีย ${r.amount} ให้</span>
+          <span class="summary-side gainer">${playerAvatar(r.gainerId)} ${escapeHtml(playerName(r.gainerId))}</span>
+        </div>`
+      )
+      .join("");
+  }
+  showScreen("summary");
+}
+
+/* ---------------- leave / reset ---------------- */
 
 async function leaveGame() {
   if (myPlayer) await api({ action: "remove", id: myPlayer.id });
   localStorage.removeItem(STORAGE_KEY);
   myPlayer = null;
+  pendingGainerId = null;
+  pendingLoserId = null;
   clearInterval(pollHandle);
   el("f-name").value = "";
   selectedAvatar = null;
@@ -145,6 +259,8 @@ async function resetGame() {
   await api({ action: "reset" });
   localStorage.removeItem(STORAGE_KEY);
   myPlayer = null;
+  pendingGainerId = null;
+  pendingLoserId = null;
   clearInterval(pollHandle);
   showScreen("login");
 }
@@ -163,6 +279,9 @@ function init() {
   el("btn-refresh").addEventListener("click", refresh);
   el("btn-leave").addEventListener("click", leaveGame);
   el("btn-reset").addEventListener("click", resetGame);
+  el("btn-summary").addEventListener("click", openSummary);
+  el("btn-back-board").addEventListener("click", () => showScreen("board"));
+  el("btn-cancel-pick").addEventListener("click", cancelSelection);
 
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {

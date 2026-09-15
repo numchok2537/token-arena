@@ -33,13 +33,32 @@
     <div class="toolbar">
       <span id="last-updated" class="muted small"></span>
       <div class="toolbar-actions">
+        <button id="btn-summary" type="button" class="btn btn-ghost small-btn">📋 สรุปผล</button>
         <button id="btn-refresh" type="button" class="btn btn-ghost small-btn">รีเฟรช</button>
         <button id="btn-leave" type="button" class="btn btn-ghost small-btn">ออกจากเกม</button>
         <button id="btn-reset" type="button" class="btn btn-danger small-btn">เริ่มเกมใหม่</button>
       </div>
     </div>
 
+    <p class="how-to muted small">กด 🔥 บนการ์ดคนที่จะ "ให้" Token แล้วกด ❄️ บนการ์ดคนที่จะ "ริบ" Token — เลือกครบสองคนแล้วระบบโอนให้อัตโนมัติ</p>
+
+    <div id="selection-bar" class="selection-bar" hidden>
+      <span>🔥 จะให้: <b id="pick-gain-label">ยังไม่เลือก</b></span>
+      <span>❄️ จะริบ: <b id="pick-lose-label">ยังไม่เลือก</b></span>
+      <button id="btn-cancel-pick" type="button" class="btn btn-ghost small-btn">ยกเลิก</button>
+    </div>
+
     <div id="player-grid" class="player-grid"></div>
+  </section>
+
+  <section id="screen-summary" class="screen">
+    <div class="card">
+      <div class="summary-header">
+        <h2>สรุปผล — ใครเสีย Token ให้ใคร</h2>
+        <button id="btn-back-board" type="button" class="btn btn-ghost small-btn">‹ กลับไปเล่นต่อ</button>
+      </div>
+      <div id="summary-list"></div>
+    </div>
   </section>
 
   <section id="screen-notconfigured" class="screen">

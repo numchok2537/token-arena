@@ -129,6 +129,22 @@ input::placeholder { color: rgba(255,255,255,0.5); }
 }
 .toolbar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
+.how-to { margin: 0 0 1rem; text-align: center; }
+
+.selection-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
 .player-grid {
   display: grid;
   gap: 1rem;
@@ -147,6 +163,9 @@ input::placeholder { color: rgba(255,255,255,0.5); }
 .player-card.me { border-color: rgba(255,255,255,0.5); box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
 .player-card.pos { box-shadow: 0 0 18px rgba(67,224,138,0.35); }
 .player-card.neg { box-shadow: 0 0 18px rgba(255,95,126,0.35); }
+.player-card.picked-gain { border-color: var(--fire); box-shadow: 0 0 0 2px var(--fire), 0 0 20px rgba(255,122,61,0.5); }
+.player-card.picked-lose { border-color: var(--ice); box-shadow: 0 0 0 2px var(--ice), 0 0 20px rgba(111,227,255,0.5); }
+.player-card.picked-gain.picked-lose { border-color: #fff; }
 
 .avatar-big { font-size: 2.6rem; line-height: 1; }
 .p-name { font-weight: 600; margin: 0.5rem 0 0.2rem; }
@@ -200,3 +219,30 @@ input::placeholder { color: rgba(255,255,255,0.5); }
 }
 
 code { background: rgba(255,255,255,0.12); padding: 0.1rem 0.4rem; border-radius: 4px; }
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.summary-header h2 { margin: 0; }
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.8rem 0.6rem;
+  border-bottom: 1px solid var(--card-border);
+  font-size: 1.02rem;
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-side { font-weight: 600; }
+.summary-side.loser { color: var(--neg); }
+.summary-side.gainer { color: var(--pos); }
+.summary-arrow { color: var(--muted); font-size: 0.9rem; }
+.center { text-align: center; }
